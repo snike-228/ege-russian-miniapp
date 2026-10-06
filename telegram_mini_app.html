@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ЕГЭ Русский: Игровой Тренажер</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        /* Smooth card flips and shakes */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0.95); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .animate-shake {
+            animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        .animate-pop {
+            animation: pop 0.25s ease-out forwards;
+        }
+
+        .gradient-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+            backdrop-filter: blur(10px);
+        }
+
+        .glass-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            transition: all 0.2s ease;
+        }
+
+        .glass-btn:active {
+            transform: scale(0.97);
+            background: rgba(255, 255, 255, 0.15);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between overflow-x-hidden selection:bg-indigo-500 selection:text-white">
+
+    <!-- HEADER -->
+    <header class="p-4 bg-slate-900/80 backdrop-blur-md border-b border-slate-800/80 sticky top-0 z-40">
+        <div class="max-w-md mx-auto flex items-center justify-between">
+            <!-- Profile Info -->
+            <div class="flex items-center space-x-3">
+                <div class="relative">
+                    <div id="user-avatar" class="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-500/20 text-lg ring-2 ring-indigo-400/30">
+                        У
+                    </div>
+                    <span id="premium-badge" class="hidden absolute -bottom-1 -right-1 bg-amber-500 text-slate-950 text-[10px] font-black px-1 rounded-full shadow">PRO</span>
+                </div>
+                <div>
+                    <div id="user-name" class="font-semibold text-sm leading-tight text-slate-200">Ученик</div>
+                    <div class="text-xs text-indigo-400 font-medium flex items-center gap-1">
+                        <span id="user-status">Бесплатный тариф</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Header -->
+            <div class="flex items-center space-x-2">
+                <!-- Streak -->
+                <div class="flex items-center bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full text-amber-400 font-bold text-xs gap-1">
+                    <span>🔥</span>
+                    <span id="streak-count">3</span>
+                    <span class="text-[10px] opacity-75">дн</span>
+                </div>
+                <!-- XP -->
+                <div class="flex items-center bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-1 rounded-full text-indigo-400 font-bold text-xs gap-1">
+                    <span>⚡</span>
+                    <span id="xp-count">120</span>
+                    <span class="text-[10px] opacity-75">XP</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="flex-1 max-w-md w-full mx-auto p-4 flex flex-col justify-center relative">
+
+        <!-- VIEW 1: HOME DASHBOARD -->
+        <div id="view-dashboard" class="space-y-4 animate-pop">
+            
+            <!-- Banner / PRO Promo -->
+            <div id="pro-banner" class="p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-indigo-600/20 to-purple-600/20 border border-amber-500/30 relative overflow-hidden flex items-center justify-between">
+                <div class="space-y-1 z-10">
+                    <span class="bg-amber-500/20 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-md border border-amber-500/30">ПРЕМИУМ</span>
+                    <h3 class="font-bold text-base text-white">Прокачай ЕГЭ на 90+</h3>
+                    <p class="text-xs text-slate-300">Безлимит, работа над ошибками и разборы</p>
+                </div>
+                <button onclick="openModal('modal-premium')" class="z-10 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-extrabold text-xs px-3.5 py-2.5 rounded-xl shadow-lg shadow-amber-500/20 active:scale-95 transition-transform whitespace-nowrap">
+                    299 ₽ / мес
+                </button>
+            </div>
+
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 pt-2">Выбери режим тренировки</h2>
+
+            <!-- Mode 1: Daily Accents -->
+            <div onclick="startQuiz('accents')" class="p-4 rounded-2xl bg-slate-900 border border-slate-800 hover:border-indigo-500/50 glass-btn flex items-center justify-between cursor-pointer group">
+                <div class="flex items-center space-x-3.5">
+                    <div class="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                        🎯
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-100 group-hover:text-indigo-400 transition-colors">Ударения (Задание №4)</h4>
+                        <p class="text-xs text-slate-400">5 экспресс-вопросов на каждый день</p>
+                    </div>
+                </div>
+                <span class="text-slate-500 group-hover:text-indigo-400 transition-colors text-lg">➔</span>
+            </div>
+
+            <!-- Mode 2: Sprint 60s -->
+            <div onclick="startQuiz('sprint')" class="p-4 rounded-2xl bg-slate-900 border border-slate-800 hover:border-emerald-500/50 glass-btn flex items-center justify-between cursor-pointer group">
+                <div class="flex items-center space-x-3.5">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                        ⚡
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-100 group-hover:text-emerald-400 transition-colors">Спринт 60 секунд</h4>
+                        <p class="text-xs text-slate-400">Сколько слов угадаешь за минуту?</p>
+                    </div>
+                </div>
+                <span class="text-slate-500 group-hover:text-emerald-400 transition-colors text-lg">➔</span>
+            </div>
+
+            <!-- Mode 3: Mistake Review (Locked) -->
+            <div onclick="handleLockedMode()" class="p-4 rounded-2xl bg-slate-900/50 border border-slate-800/80 glass-btn flex items-center justify-between cursor-pointer relative overflow-hidden group">
+                <div class="flex items-center space-x-3.5 opacity-60">
+                    <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-2xl">
+                        🧠
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-100">Работа над ошибками</h4>
+                        <p class="text-xs text-slate-400">Персональный повтор сложных слов</p>
+                    </div>
+                </div>
+                <span class="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1">
+                    🔒 PRO
+                </span>
+            </div>
+        </div>
+
+        <!-- VIEW 2: GAME SCREEN -->
+        <div id="view-game" class="hidden space-y-6 animate-pop">
+            <!-- Progress & Timer -->
+            <div class="space-y-2">
+                <div class="flex justify-between items-center text-xs font-semibold text-slate-400">
+                    <span id="question-counter">Вопрос 1 из 5</span>
+                    <span id="game-timer" class="text-indigo-400 font-mono text-sm font-bold">15 сек</span>
+                </div>
+                <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                    <div id="progress-bar" class="bg-gradient-to-r from-indigo-500 to-purple-500 h-full w-0 transition-all duration-300"></div>
+                </div>
+            </div>
+
+            <!-- Main Question Card -->
+            <div id="question-card" class="bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-6 shadow-2xl relative overflow-hidden">
+                <div class="text-xs uppercase font-bold tracking-widest text-indigo-400">Где верное ударение?</div>
+                
+                <!-- Word Title -->
+                <div id="word-display" class="text-3xl font-extrabold tracking-wide text-white py-2">
+                    ---
+                </div>
+
+                <!-- Answer Options Buttons -->
+                <div id="options-container" class="grid grid-cols-1 gap-3 pt-2">
+                    <!-- Dynamic buttons injected by JS -->
+                </div>
+
+                <!-- Feedback / Explanation Box (Hidden by default) -->
+                <div id="explanation-box" class="hidden text-left bg-slate-950/80 p-4 rounded-2xl border border-slate-800 text-xs text-slate-300 animate-pop space-y-1">
+                    <div class="font-bold text-indigo-400 flex items-center gap-1">
+                        <span>💡 Правило:</span>
+                    </div>
+                    <p id="explanation-text">...</p>
+                </div>
+            </div>
+
+            <!-- Action / Next Button -->
+            <button id="next-btn" onclick="nextQuestion()" class="hidden w-full py-4 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-bold rounded-2xl shadow-lg shadow-indigo-600/30 transition-all text-sm">
+                Следующий вопрос ➔
+            </button>
+        </div>
+
+        <!-- VIEW 3: RESULTS SCREEN -->
+        <div id="view-result" class="hidden text-center space-y-6 animate-pop py-6">
+            <div class="w-20 h-20 bg-indigo-500/10 border-2 border-indigo-500/30 rounded-full flex items-center justify-center text-4xl mx-auto">
+                🏆
+            </div>
+            
+            <div class="space-y-1">
+                <h3 class="text-2xl font-black text-white">Тренировка окончена!</h3>
+                <p class="text-xs text-slate-400">Отличный результат, так держать!</p>
+            </div>
+
+            <!-- Stats Summary Cards -->
+            <div class="grid grid-cols-2 gap-3 max-w-xs mx-auto">
+                <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+                    <div class="text-xs text-slate-400">Верных ответов</div>
+                    <div id="result-score" class="text-2xl font-black text-emerald-400">0/5</div>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+                    <div class="text-xs text-slate-400">Заработано XP</div>
+                    <div id="result-xp" class="text-2xl font-black text-indigo-400">+0 XP</div>
+                </div>
+            </div>
+
+            <button onclick="showDashboard()" class="w-full py-4 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold rounded-2xl transition-all text-sm">
+                Вернуться в главное меню
+            </button>
+        </div>
+
+    </main>
+
+    <!-- MODAL: PREMIUM SUBSCRIPTION -->
+    <div id="modal-premium" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4 animate-pop">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 space-y-5 relative">
+            <button onclick="closeModal('modal-premium')" class="absolute top-4 right-4 text-slate-400 text-lg w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center">✕</button>
+            
+            <div class="text-center space-y-2">
+                <div class="w-12 h-12 bg-amber-500/20 text-amber-400 text-2xl rounded-2xl flex items-center justify-center mx-auto border border-amber-500/30">👑</div>
+                <h3 class="text-xl font-black text-white">ЕГЭ Экспресс PRO</h3>
+                <p class="text-xs text-slate-400">Готовься к экзаменам без ограничений</p>
+            </div>
+
+            <ul class="space-y-3 text-xs text-slate-300">
+                <li class="flex items-center gap-2.5">
+                    <span class="text-emerald-400 text-base">✓</span>
+                    <span>Безлимитные тренировки по всем заданиям</span>
+                </li>
+                <li class="flex items-center gap-2.5">
+                    <span class="text-emerald-400 text-base">✓</span>
+                    <span>Умный режим «Работа над ошибками»</span>
+                </li>
+                <li class="flex items-center gap-2.5">
+                    <span class="text-emerald-400 text-base">✓</span>
+                    <span>Полный справочник правил с подказками</span>
+                </li>
+            </ul>
+
+            <div class="p-4 bg-slate-950 rounded-2xl border border-slate-800 text-center space-y-1">
+                <div class="text-2xl font-black text-white">299 ₽ <span class="text-xs font-normal text-slate-400">/ месяц</span></div>
+                <div class="text-[10px] text-amber-400 font-medium">Отмена подписки в любой момент</div>
+            </div>
+
+            <button onclick="buyPremium()" class="w-full py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-2xl shadow-lg shadow-amber-500/20 active:scale-95 transition-all text-sm">
+                Оформить подписку
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Data Questions Dataset
+        const QUESTIONS_DATA = [
+            { id: 1, word: "банты", options: ["бАоты", "бантЫ"], correct: 0, rule: "В существительном «бАоты» ударение всегда остается на корне во всех формах." },
+            { id: 2, word: "звонит", options: ["звОнит", "звонИт"], correct: 1, rule: "Глаголы на -ИТЬ имеют фиксированное ударение на окончание: звонИт, включИт." },
+            { id: 3, word: "торты", options: ["тОрты", "тортЫ"], correct: 0, rule: "Неподвижное ударение на первом слоге во всех формах: тОрт - тОрты." },
+            { id: 4, word: "красивее", options: ["красИвее", "красивеЕ"], correct: 0, rule: "В сравнительной степени ударение сохраняется на И: красИвее." },
+            { id: 5, word: "каталог", options: ["катАлог", "каталОг"], correct: 1, rule: "Слова на -ЛОГ имеют ударение на последний слог: каталОг, диалОг." }
+        ];
+
+        // App State
+        let userState = {
+            name: "Ученик",
+            xp: 120,
+            streak: 3,
+            isPremium: false
+        };
+
+        let currentQuiz = {
+            questions: [],
+            currentIndex: 0,
+            score: 0,
+            timer: null,
+            timeLeft: 15
+        };
+
+        // Initialize Telegram WebApp SDK
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.Telegram && window.Telegram.WebApp) {
+                const tg = window.Telegram.WebApp;
+                tg.ready();
+                tg.expand();
+                
+                if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                    userState.name = tg.initDataUnsafe.user.first_name || "Ученик";
+                    document.getElementById('user-name').innerText = userState.name;
+                    document.getElementById('user-avatar').innerText = userState.name.charAt(0).toUpperCase();
+                }
+            }
+            updateUserHeader();
+        });
+
+        function updateUserHeader() {
+            document.getElementById('xp-count').innerText = userState.xp;
+            document.getElementById('streak-count').innerText = userState.streak;
+            if (userState.isPremium) {
+                document.getElementById('premium-badge').classList.remove('hidden');
+                document.getElementById('user-status').innerText = "PRO Активен";
+                document.getElementById('user-status').classList.replace('text-indigo-400', 'text-amber-400');
+                document.getElementById('pro-banner').classList.add('hidden');
+            }
+        }
+
+        // Navigation Functions
+        function showDashboard() {
+            document.getElementById('view-dashboard').classList.remove('hidden');
+            document.getElementById('view-game').classList.add('hidden');
+            document.getElementById('view-result').classList.add('hidden');
+            clearInterval(currentQuiz.timer);
+        }
+
+        function startQuiz(mode) {
+            currentQuiz.questions = [...QUESTIONS_DATA].sort(() => Math.random() - 0.5);
+            currentQuiz.currentIndex = 0;
+            currentQuiz.score = 0;
+
+            document.getElementById('view-dashboard').classList.add('hidden');
+            document.getElementById('view-game').classList.remove('hidden');
+            document.getElementById('view-result').classList.add('hidden');
+
+            loadQuestion();
+        }
+
+        // Question Handling Logic
+        function loadQuestion() {
+            const q = currentQuiz.questions[currentQuiz.currentIndex];
+            const total = currentQuiz.questions.length;
+
+            // Reset UI
+            document.getElementById('question-counter').innerText = `Вопрос ${currentQuiz.currentIndex + 1} из ${total}`;
+            document.getElementById('progress-bar').style.width = `${((currentQuiz.currentIndex) / total) * 100}%`;
+            document.getElementById('word-display').innerText = q.word.toLowerCase();
+            document.getElementById('explanation-box').classList.add('hidden');
+            document.getElementById('next-btn').classList.add('hidden');
+
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+
+            // Render Options
+            q.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full py-4 px-6 rounded-2xl bg-slate-800 border border-slate-700/80 text-white font-bold text-lg hover:border-indigo-500/50 glass-btn transition-all text-center";
+                btn.innerText = opt;
+                btn.onclick = () => checkAnswer(idx, btn);
+                optionsContainer.appendChild(btn);
+            });
+
+            // Timer Setup
+            startTimer(15);
+        }
+
+        function startTimer(seconds) {
+            clearInterval(currentQuiz.timer);
+            currentQuiz.timeLeft = seconds;
+            const timerEl = document.getElementById('game-timer');
+            timerEl.innerText = `${currentQuiz.timeLeft} сек`;
+
+            currentQuiz.timer = setInterval(() => {
+                currentQuiz.timeLeft--;
+                timerEl.innerText = `${currentQuiz.timeLeft} сек`;
+                if (currentQuiz.timeLeft <= 0) {
+                    clearInterval(currentQuiz.timer);
+                    handleTimeOut();
+                }
+            }, 1000);
+        }
+
+        function checkAnswer(selectedIndex, selectedBtn) {
+            clearInterval(currentQuiz.timer);
+            const q = currentQuiz.questions[currentQuiz.currentIndex];
+            const isCorrect = selectedIndex === q.correct;
+            const optionsContainer = document.getElementById('options-container');
+            const buttons = optionsContainer.getElementsByTagName('button');
+
+            // Disable all option buttons
+            Array.from(buttons).forEach(btn => btn.disabled = true);
+
+            if (isCorrect) {
+                selectedBtn.classList.replace('bg-slate-800', 'bg-emerald-600/90');
+                selectedBtn.classList.add('border-emerald-400', 'text-white');
+                currentQuiz.score++;
+                userState.xp += 10;
+            } else {
+                selectedBtn.classList.replace('bg-slate-800', 'bg-rose-600/90');
+                selectedBtn.classList.add('border-rose-400', 'animate-shake');
+                
+                // Highlight correct answer
+                buttons[q.correct].classList.replace('bg-slate-800', 'bg-emerald-600/90');
+            }
+
+            // Show explanation rule
+            document.getElementById('explanation-text').innerText = q.rule;
+            document.getElementById('explanation-box').classList.remove('hidden');
+
+            // Show Next Button
+            document.getElementById('next-btn').classList.remove('hidden');
+            updateUserHeader();
+        }
+
+        function handleTimeOut() {
+            const q = currentQuiz.questions[currentQuiz.currentIndex];
+            const optionsContainer = document.getElementById('options-container');
+            const buttons = optionsContainer.getElementsByTagName('button');
+
+            Array.from(buttons).forEach(btn => btn.disabled = true);
+            buttons[q.correct].classList.replace('bg-slate-800', 'bg-emerald-600/90');
+
+            document.getElementById('explanation-text').innerText = "Время вышло! " + q.rule;
+            document.getElementById('explanation-box').classList.remove('hidden');
+            document.getElementById('next-btn').classList.remove('hidden');
+        }
+
+        function nextQuestion() {
+            currentQuiz.currentIndex++;
+            if (currentQuiz.currentIndex < currentQuiz.questions.length) {
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        function showResults() {
+            document.getElementById('view-game').classList.add('hidden');
+            document.getElementById('view-result').classList.remove('hidden');
+
+            document.getElementById('result-score').innerText = `${currentQuiz.score}/${currentQuiz.questions.length}`;
+            document.getElementById('result-xp').innerText = `+${currentQuiz.score * 10} XP`;
+        }
+
+        // Modals & Locks
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        function handleLockedMode() {
+            if (!userState.isPremium) {
+                openModal('modal-premium');
+            }
+        }
+
+        function buyPremium() {
+            userState.isPremium = true;
+            updateUserHeader();
+            closeModal('modal-premium');
+            alert('🎉 Поздравляем! Подписка PRO успешно активирована.');
+        }
+    </script>
+</body>
+</html>
